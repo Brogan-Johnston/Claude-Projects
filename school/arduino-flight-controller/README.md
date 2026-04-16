@@ -1,0 +1,357 @@
+# Arduino Flight Stick & Throttle Controller
+
+A USB flight stick and throttle controller built from the **Elegoo Super Starter Kit for UNO**.
+The Arduino UNO R3 reads physical inputs and sends serial data to a Python desktop app on the
+PC, which translates them into virtual joystick inputs for use in flight simulation games
+(DCS World, Microsoft Flight Simulator, X-Plane, etc.).
+
+---
+
+## Table of Contents
+
+1. [Hardware Components](#1-hardware-components)
+2. [Wiring](#2-wiring)
+3. [Required Software](#3-required-software)
+4. [Hardware Setup](#4-hardware-setup)
+5. [Uploading the Firmware](#5-uploading-the-firmware)
+6. [Installing Python Dependencies](#6-installing-python-dependencies)
+7. [Running the Config App](#7-running-the-config-app)
+8. [Using the App](#8-using-the-app)
+9. [Configuring Your Flight Sim](#9-configuring-your-flight-sim)
+10. [Troubleshooting](#10-troubleshooting)
+11. [File Structure](#11-file-structure)
+12. [How It Works](#12-how-it-works)
+
+---
+
+## 1. Hardware Components
+
+All components come from the Elegoo Super Starter Kit for UNO.
+
+| Component | Kit Part | Role |
+|-----------|----------|------|
+| Arduino UNO R3 | Included | Main controller board |
+| Joystick module (KY-023) | Included | X/Y flight stick axes + trigger button |
+| Potentiometer (10 kΩ) | Included | Throttle axis |
+| SG90 Servo | Included | Physical throttle feedback (mirrors pot position) |
+| Breadboard | Included | Wiring platform |
+| Jumper wires (M-to-M) | Included | Connections |
+| USB A-to-B cable | Included | Arduino ↔ PC |
+
+---
+
+## 2. Wiring
+
+Wire everything on the breadboard before uploading firmware. All modules share the Arduino's
+5V and GND rails.
+
+### Joystick Module (KY-023) → Arduino UNO
+
+The joystick module has 5 pins along one edge, labelled on the PCB.
+
+| Joystick Pin | Arduino Pin | Notes |
+|-------------|-------------|-------|
+| GND | GND | |
+| +5V | 5V | |
+| VRx | A0 | Left/right axis (roll) |
+| VRy | A1 | Forward/back axis (pitch) |
+| SW | D2 | Trigger button — active LOW |
+
+> The button pin uses the Arduino's internal pull-up resistor, so no external resistor is needed.
+
+### Potentiometer (Throttle) → Arduino UNO
+
+Orient the pot so that rotating it fully counter-clockwise = idle (0) and fully clockwise = full power (1023).
+
+| Potentiometer Pin | Arduino Pin |
+|------------------|-------------|
+| Left outer leg | GND |
+| Center wiper | A2 |
+| Right outer leg | 5V |
+
+### SG90 Servo → Arduino UNO
+
+The SG90 has three wires. The servo physically rotates to mirror the throttle potentiometer position, giving you a visual and tactile indicator.
+
+| Servo Wire Color | Arduino Pin | Notes |
+|-----------------|-------------|-------|
+| Brown | GND | |
+| Red | 5V | |
+| Orange | D9 | PWM signal |
+
+> **Power note:** The UNO's 5V rail can supply around 500 mA, which is enough for the SG90
+> in normal use. If the Arduino resets when the servo moves, power the servo's Red wire from
+> an external 5V source instead, with a shared GND.
+
+---
+
+## 3. Required Software
+
+Install these four things in order on your Windows PC before doing anything else.
+
+### 3.1 Arduino IDE
+
+Used to compile and upload the flight controller firmware to the UNO R3.
+
+**Download:** https://www.arduino.cc/en/software
+
+1. Click **Windows Win 10 and newer, 64 bits** (or the MSI installer).
+2. Run the installer with default settings.
+3. Allow the driver installation prompts — these let Windows recognize the UNO over USB.
+
+### 3.2 vJoy Driver
+
+vJoy creates a virtual joystick device that Windows and games can see, even though no physical
+joystick is plugged in. The Python app feeds your Arduino data into this virtual device.
+
+**Download:** https://sourceforge.net/projects/vjoystick/
+
+1. Click **Download** and run the installer with default settings.
+2. After installation, open **Configure vJoy** from the Start menu.
+3. Under **Device 1**, make sure the following are checked:
+   - Axis **X** (flight stick left/right)
+   - Axis **Y** (flight stick forward/back)
+   - Axis **Z** (throttle)
+   - **Number of Buttons:** at least **1**
+4. Click **Apply** and close the window.
+
+> If you do not see "Configure vJoy" in the Start menu, look for **vJoyConf** inside
+> `C:\Program Files\vJoy\x64\`.
+
+### 3.3 Python 3
+
+The configuration app is written in Python.
+
+**Download:** https://www.python.org/downloads/ (version 3.10 or newer recommended)
+
+1. Run the installer.
+2. On the first screen, **check the box that says "Add Python to PATH"** before clicking Install.
+3. Complete the installation.
+4. Verify it worked: open a Command Prompt and type `python --version`. You should see a version number.
+
+### 3.4 Python Packages
+
+Once Python is installed, open a Command Prompt, navigate to the project's `app` folder,
+and run:
+
+```
+pip install -r requirements.txt
+```
+
+This installs:
+- **pyserial** — reads the Arduino's USB serial data
+- **pyvjoy** — sends axis data to the vJoy virtual device
+
+---
+
+## 4. Hardware Setup
+
+1. Place the breadboard, Arduino, joystick module, potentiometer, and servo on your desk.
+2. Connect all components according to the wiring tables in [Section 2](#2-wiring).
+3. Do not connect the Arduino to the PC yet — wait until after uploading firmware.
+
+---
+
+## 5. Uploading the Firmware
+
+1. Open **Arduino IDE**.
+2. Go to **File → Open** and navigate to:
+   ```
+   school/arduino-flight-controller/firmware/flight_controller/flight_controller.ino
+   ```
+3. Go to **Tools → Board** and select **Arduino Uno**.
+4. Connect the Arduino to your PC via USB.
+5. Go to **Tools → Port** and select the port labelled something like **COM3 (Arduino Uno)**.
+   - If you are unsure which COM port, check Device Manager under **Ports (COM & LPT)**.
+6. Click the **Upload** button (the right-arrow icon, or press `Ctrl+U`).
+7. Wait for the IDE to show **Done uploading** in the status bar.
+8. Open **Tools → Serial Monitor**, set the baud rate to **115200**, and confirm you see
+   comma-separated numbers updating roughly 50 times per second. This confirms the firmware
+   is running correctly.
+
+---
+
+## 6. Installing Python Dependencies
+
+Open a Command Prompt and run:
+
+```
+cd C:\Users\Broga\Projects\school\arduino-flight-controller\app
+pip install -r requirements.txt
+```
+
+Expected output: pip downloads and installs `pyserial` and `pyvjoy` without errors.
+
+---
+
+## 7. Running the Config App
+
+With the Arduino plugged in and firmware uploaded, run:
+
+```
+cd C:\Users\Broga\Projects\school\arduino-flight-controller\app
+python main.py
+```
+
+The configuration window will open.
+
+---
+
+## 8. Using the App
+
+### Connecting to the Arduino
+
+1. In the **Port** dropdown, select the COM port your Arduino is on (e.g. `COM3`).
+   - Click **Refresh** if the port is not listed.
+2. Click **Connect**.
+3. The status label turns green and shows **Connected**.
+4. The **Live Input** panel on the right will start showing values as you move the stick and throttle.
+
+### Sensitivity
+
+Controls how aggressively the axis responds. The slider applies a **power curve**:
+
+- **1.0** — linear, full 1:1 response across the whole range.
+- **> 1.0** — less sensitive near center, more sensitive near the edges. Good for precise
+  aiming in combat sims.
+- **< 1.0** — more sensitive near center.
+
+Adjust and watch the live bars to feel the difference.
+
+### Deadzone
+
+The fraction of the axis travel near center that is ignored and mapped to exactly zero.
+Prevents stick drift from a loose joystick returning slightly off-center.
+
+- **0%** — no deadzone (every tiny movement registers).
+- **5–10%** — typical starting point.
+- **Up to 50%** — use only if the stick is very drifty.
+
+### Invert Axis
+
+Flips the axis direction. Use this if your pitch or roll is backwards in-game.
+
+### Set Center (Calibration)
+
+If your joystick drifts slightly from the electrical center of 512:
+
+1. Let go of the stick so it rests at neutral.
+2. Click **Set Center** for X and then Y.
+3. The app records the current raw reading as the center point.
+
+### Saving Your Config
+
+Click **Save Config** to write your settings to `config/default_config.json`.
+They will be loaded automatically the next time you open the app.
+
+---
+
+## 9. Configuring Your Flight Sim
+
+The app outputs to **vJoy Device 1**. Each flight sim has its own controls menu —
+look for joystick or HOTAS binding options and assign:
+
+| vJoy Axis | Physical Control | Typical In-Game Binding |
+|-----------|-----------------|------------------------|
+| Axis X | Joystick left/right | Roll |
+| Axis Y | Joystick forward/back | Pitch |
+| Axis Z | Throttle potentiometer | Throttle |
+| Button 1 | Joystick push-button | Weapons / fire / action |
+
+**DCS World:** Options → Controls → select your aircraft → Axis Assign tab → click a binding
+and move the physical input to auto-detect.
+
+**Microsoft Flight Simulator:** Options → Controls → select vJoy Device → assign axes and
+buttons as needed.
+
+**X-Plane:** Settings → Joystick → select vJoy Device → drag axes to the desired function.
+
+---
+
+## 10. Troubleshooting
+
+### "Port not listed / cannot connect"
+- Make sure the Arduino is plugged in via USB.
+- Click **Refresh** in the app.
+- Check Device Manager → Ports (COM & LPT) to confirm Windows sees the Arduino.
+- If it shows as an unknown device, re-install the Arduino IDE drivers.
+
+### Live display does not respond / all zeros
+- Open Arduino IDE Serial Monitor (115200 baud) to confirm the firmware is sending data.
+- Make sure only one program (Serial Monitor OR the Python app) is connected to the port at
+  a time — they cannot both be open simultaneously.
+
+### "vJoy: Not found" in the app
+- Install the vJoy driver (see Section 3.2).
+- After installing, restart the app.
+
+### vJoy Device 1 not visible in games
+- Open **Configure vJoy**, confirm Device 1 is enabled with axes X, Y, Z and at least 1 button, and click Apply.
+- Check Windows **Control Panel → Devices and Printers** — vJoy Device should appear there.
+
+### Servo jitters or Arduino resets
+- The UNO's 5V rail is being overloaded. Power the servo from a separate 5V USB adapter,
+  connecting only the GND wire back to the Arduino.
+
+### Axis is reversed in-game
+- Check the **Invert** checkbox for that axis in the app, or use the in-game axis invert option.
+
+### Joystick drifts at rest
+- Increase the **Deadzone** slider for that axis.
+- Click **Set Center** with the stick at rest to update the neutral reference point.
+
+---
+
+## 11. File Structure
+
+```
+arduino-flight-controller/
+├── README.md                       ← this file
+├── CLAUDE.md                       ← project notes for Claude Code
+├── todos.md                        ← task tracking
+│
+├── firmware/
+│   └── flight_controller/
+│       └── flight_controller.ino   ← upload this to the Arduino
+│
+├── app/
+│   ├── main.py                     ← run this to open the config app
+│   ├── serial_reader.py            ← reads and parses Arduino serial data
+│   ├── vjoy_output.py              ← sends processed axes to vJoy
+│   ├── config_manager.py           ← loads and saves JSON config
+│   └── requirements.txt            ← pip install -r requirements.txt
+│
+└── config/
+    └── default_config.json         ← saved sensitivity/deadzone settings
+```
+
+---
+
+## 12. How It Works
+
+```
+Physical inputs
+    │
+    ▼
+Arduino UNO R3
+  • Reads joystick X (A0), Y (A1), button (D2) at 50 Hz
+  • Reads throttle potentiometer (A2)
+  • Rotates SG90 servo (D9) to mirror throttle position
+  • Sends:  X,Y,BTN,THROTTLE  over USB serial at 115200 baud
+    │
+    ▼  USB cable
+Python app  (main.py)
+  • serial_reader.py   parses the CSV stream in a background thread
+  • config_manager.py  holds deadzone / sensitivity / invert settings
+  • main.py            applies deadzone and sensitivity curves,
+                       updates the live display at 50 Hz
+  • vjoy_output.py     pushes the processed axes to vJoy Device 1
+    │
+    ▼  Windows driver
+vJoy Device 1
+  (appears as a standard joystick to any game or sim)
+```
+
+The Arduino's serial data is raw ADC values (0–1023). The Python app normalises these to
+-1.0 → +1.0 for the stick axes and 0.0 → 1.0 for the throttle, then applies your chosen
+deadzone and sensitivity curve before forwarding to vJoy.
