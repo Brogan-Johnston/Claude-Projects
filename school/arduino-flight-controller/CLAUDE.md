@@ -11,9 +11,11 @@ the PC, which translates them into virtual joystick inputs for use in flight sim
 |-----------|--------|------|
 | Arduino UNO R3 | Elegoo kit | Main controller board |
 | Joystick module (KY-023) | Elegoo kit | X/Y flight stick axes + trigger button |
-| Potentiometer (10 kΩ) | Elegoo kit | Throttle axis |
-| SG90 Servo | Elegoo kit | Physical throttle position feedback |
-| Breadboard + jumper wires | Elegoo kit | Wiring |
+| Potentiometer (10 kΩ) | Elegoo kit | Throttle axis (integrated into 3D-printed throttle) |
+| Jumper wires | Elegoo kit | Direct wiring (no breadboard) |
+
+> The SG90 servo is not used. The potentiometer is the throttle position sensor.
+> 0% and 100% endpoints are calibrated in software via the PC app.
 
 ## Wiring Diagram
 
@@ -26,23 +28,20 @@ the PC, which translates them into virtual joystick inputs for use in flight sim
 | VRy | A1 | Y axis (pitch) |
 | SW | D2 | Button (active LOW, uses internal pullup) |
 
-### Potentiometer (Throttle) → Arduino UNO
-| Pot Pin | Arduino Pin | Notes |
-|---------|-------------|-------|
-| Left leg | GND | |
-| Wiper (center) | A2 | Throttle reading |
-| Right leg | 5V | |
+### Potentiometer (Throttle) → Arduino UNO (no breadboard)
+| Pot Pin | Connection | Notes |
+|---------|------------|-------|
+| Left leg (GND) | Arduino GND | Use the second GND pin on the power header |
+| Wiper (center) | Arduino A2 | Throttle reading |
+| Right leg (VCC) | Joystick VCC pin | Daisy-chain off joystick — no breadboard needed |
 
-### SG90 Servo → Arduino UNO
-| Servo Wire | Arduino Pin | Notes |
-|-----------|-------------|-------|
-| Brown | GND | |
-| Red | 5V | |
-| Orange | D9 | PWM signal |
-
-> The servo physically mirrors the throttle potentiometer position, giving tactile feedback.
-> For heavy use, power the servo from an external 5V supply (the UNO's 5V rail can supply
-> ~500mA which is fine for light demo use).
+> **No-breadboard wiring tip:** The Arduino power header has two GND pins and one 5V pin.
+> Run the joystick GND to one GND pin and the pot GND to the other. For 5V, run a short
+> wire from the pot's right leg directly to the joystick module's VCC pin, sharing power
+> without a breadboard.
+>
+> **Power budget:** Joystick (~5 mA) + pot (~0.5 mA) = ~5.5 mA total. USB supplies 500 mA.
+> No issues.
 
 ## Languages & Tools
 - **C++ (Arduino)** — firmware in `firmware/flight_controller/flight_controller.ino`
@@ -103,10 +102,16 @@ python main.py
 
 1. Select the Arduino COM port from the dropdown
 2. Click **Connect**
-3. Move the joystick and throttle — the live display should respond
-4. Adjust sensitivity and deadzone sliders as needed
-5. Click **Save Config** to persist settings
-6. Launch your flight sim — configure it to use the vJoy Device 1 axes
+3. Move the joystick — the X/Y bars should respond
+4. Move the throttle to its physical **idle (0%)** position, then click **Set 0%** in the Throttle panel
+5. Move the throttle to its physical **full (100%)** position, then click **Set 100%**
+6. Verify the throttle bar and % readout span the full range with no dead areas
+7. Adjust sensitivity and deadzone sliders as needed
+8. Click **Save Config** to persist calibration to disk
+9. Launch your flight sim — configure it to use vJoy Device 1 axes (X=roll, Y=pitch, Z=throttle)
+
+> Calibration is stored in `config/default_config.json`. Re-run calibration any time the
+> throttle feels off (e.g., after reassembling the 3D-printed mechanism).
 
 ## File Structure
 ```

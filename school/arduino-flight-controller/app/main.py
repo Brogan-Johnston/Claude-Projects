@@ -211,16 +211,26 @@ class App(tk.Tk):
         dz_var.trace_add("write", lambda *_: dz_lbl.config(text=f"{dz_var.get()*100:3.0f}%"))
         w["deadzone"] = dz_var
 
-        # Invert checkbox + calibrate button
+        # Invert checkbox + calibrate button(s)
         inv_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(frame, text="Invert axis", variable=inv_var).grid(
             row=2, column=1, sticky="w", **p)
         w["inverted"] = inv_var
 
-        ttk.Button(
-            frame, text="Set Center",
-            command=lambda a=axis: self._set_center(a),
-        ).grid(row=2, column=2, **p)
+        if axis == "throttle":
+            ttk.Button(
+                frame, text="Set 0%",
+                command=self._set_throttle_min,
+            ).grid(row=2, column=2, **p)
+            ttk.Button(
+                frame, text="Set 100%",
+                command=self._set_throttle_max,
+            ).grid(row=3, column=2, **p)
+        else:
+            ttk.Button(
+                frame, text="Set Center",
+                command=lambda a=axis: self._set_center(a),
+            ).grid(row=2, column=2, **p)
 
         return w
 
@@ -327,26 +337,33 @@ class App(tk.Tk):
     def _set_center(self, axis: str) -> None:
         """Record the current raw reading as the center/neutral position."""
         with self._lock:
-            state = self._state
+            raw = self._state.x if axis == "x" else self._state.y
+        self._cfg.set_axis(axis, "center", raw)
+        messagebox.showinfo("Center Set", f"{axis.upper()} center locked to raw {raw}.")
 
-        raw_map = {"x": state.x, "y": state.y, "throttle": state.throttle}
-        raw = raw_map[axis]
+    def _set_throttle_min(self) -> None:
+        """Lock the current throttle position as the 0% endpoint."""
+        with self._lock:
+            raw = self._state.throttle
+        self._cfg.set_axis("throttle", "min", raw)
+        messagebox.showinfo("Throttle 0% Set",
+                            f"0% position locked to raw ADC {raw}.\n"
+                            "Click Save Config to persist.")
 
-        if axis in ("x", "y"):
-            self._cfg.set_axis(axis, "center", raw)
-            messagebox.showinfo(
-                "Center Set",
-                f"{axis.upper()} center locked to {raw}.\n\n"
-                "Tip: for min/max calibration, edit default_config.json manually "
-                "after sweeping the full axis range and noting the extremes.",
-            )
-        else:
-            messagebox.showinfo(
-                "Throttle Info",
-                f"Current throttle raw value: {raw}\n"
-                "Throttle min=0 and max=1023 are already at the ADC limits.\n"
-                "Use the Deadzone slider to trim idle creep.",
-            )
+    def _set_throttle_max(self) -> None:
+        """Lock the current throttle position as the 100% endpoint."""
+        with self._lock:
+            raw = self._state.throttle
+        mx = self._cfg.get_axis("throttle").get("min", 0)
+        if raw <= mx:
+            messagebox.showwarning("Bad Calibration",
+                                   f"Raw value {raw} is not greater than the 0% value ({mx}).\n"
+                                   "Move the throttle to its full-forward position first.")
+            return
+        self._cfg.set_axis("throttle", "max", raw)
+        messagebox.showinfo("Throttle 100% Set",
+                            f"100% position locked to raw ADC {raw}.\n"
+                            "Click Save Config to persist.")
 
     # ── 50 Hz display tick (runs in main thread) ──────────────────────
 
@@ -371,7 +388,7 @@ class App(tk.Tk):
         # Update raw readouts
         self._raw_labels["x"].set(f"raw {state.x:4d}")
         self._raw_labels["y"].set(f"raw {state.y:4d}")
-        self._raw_labels["throttle"].set(f"raw {state.throttle:4d}")
+        self._raw_labels["throttle"].set(f"raw {state.throttle:4d}  ({t*100:.0f}%)")
 
         # Button indicator
         self._btn_lbl_var.set("TRIGGER: ON" if state.button else "TRIGGER: off")

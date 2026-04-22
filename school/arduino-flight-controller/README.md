@@ -32,18 +32,41 @@ All components come from the Elegoo Super Starter Kit for UNO.
 |-----------|----------|------|
 | Arduino UNO R3 | Included | Main controller board |
 | Joystick module (KY-023) | Included | X/Y flight stick axes + trigger button |
-| Potentiometer (10 kΩ) | Included | Throttle axis |
-| SG90 Servo | Included | Physical throttle feedback (mirrors pot position) |
-| Breadboard | Included | Wiring platform |
-| Jumper wires (M-to-M) | Included | Connections |
+| Potentiometer (10 kΩ) | Included | Throttle position sensor (integrated into 3D-printed throttle) |
+| Jumper wires (M-to-M) | Included | Direct wiring — no breadboard required |
 | USB A-to-B cable | Included | Arduino ↔ PC |
+
+> The SG90 servo is not used in this build. Throttle position is read from the
+> potentiometer; the 0% and 100% endpoints are calibrated in the PC app.
 
 ---
 
 ## 2. Wiring
 
-Wire everything on the breadboard before uploading firmware. All modules share the Arduino's
-5V and GND rails.
+Everything connects directly to the Arduino with jumper wires — no breadboard needed.
+The potentiometer daisy-chains its power off the joystick module so only one 5V wire
+runs to the Arduino.
+
+### Overview
+
+```
+Arduino UNO R3
+  Power header (left side):
+    5V  ──────────────────── Joystick VCC
+    GND (pin 1 of 2) ─────── Joystick GND
+    GND (pin 2 of 2) ─────── Pot left leg (GND)
+
+  Analog header (right side):
+    A0 ────────────────────── Joystick VRx
+    A1 ────────────────────── Joystick VRy
+    A2 ────────────────────── Pot wiper (center leg)
+
+  Digital pin:
+    D2 ────────────────────── Joystick SW
+
+  Joystick module (on the module itself):
+    VCC pin ───────────────── Pot right leg (VCC)   ← daisy-chain, no breadboard needed
+```
 
 ### Joystick Module (KY-023) → Arduino UNO
 
@@ -51,8 +74,8 @@ The joystick module has 5 pins along one edge, labelled on the PCB.
 
 | Joystick Pin | Arduino Pin | Notes |
 |-------------|-------------|-------|
-| GND | GND | |
-| +5V | 5V | |
+| GND | GND (power header, first GND pin) | |
+| +5V | 5V (power header) | |
 | VRx | A0 | Left/right axis (roll) |
 | VRy | A1 | Forward/back axis (pitch) |
 | SW | D2 | Trigger button — active LOW |
@@ -61,27 +84,22 @@ The joystick module has 5 pins along one edge, labelled on the PCB.
 
 ### Potentiometer (Throttle) → Arduino UNO
 
-Orient the pot so that rotating it fully counter-clockwise = idle (0) and fully clockwise = full power (1023).
+The pot is integrated into the 3D-printed throttle mechanism. Its power comes from
+the joystick module's VCC pin (a short jumper between the two), so only one 5V wire
+runs back to the Arduino.
 
-| Potentiometer Pin | Arduino Pin |
-|------------------|-------------|
-| Left outer leg | GND |
-| Center wiper | A2 |
-| Right outer leg | 5V |
+| Potentiometer Pin | Connection | Notes |
+|------------------|------------|-------|
+| Left outer leg (GND) | Arduino GND (power header, second GND pin) | |
+| Center wiper | Arduino A2 | Throttle position reading |
+| Right outer leg (VCC) | Joystick VCC pin (on the joystick module) | Daisy-chained |
 
-### SG90 Servo → Arduino UNO
+> **Power budget:** Joystick (~5 mA) + potentiometer (~0.5 mA) = ~5.5 mA total.
+> The Arduino's 5V rail supplies up to 500 mA via USB — no issues.
 
-The SG90 has three wires. The servo physically rotates to mirror the throttle potentiometer position, giving you a visual and tactile indicator.
-
-| Servo Wire Color | Arduino Pin | Notes |
-|-----------------|-------------|-------|
-| Brown | GND | |
-| Red | 5V | |
-| Orange | D9 | PWM signal |
-
-> **Power note:** The UNO's 5V rail can supply around 500 mA, which is enough for the SG90
-> in normal use. If the Arduino resets when the servo moves, power the servo's Red wire from
-> an external 5V source instead, with a shared GND.
+> **Arduino power header pin order** (from the reset button end):
+> `RESET — 3.3V — 5V — GND — GND — VIN`
+> Use the two GND pins to give the joystick and potentiometer each their own GND wire.
 
 ---
 
@@ -146,9 +164,12 @@ This installs:
 
 ## 4. Hardware Setup
 
-1. Place the breadboard, Arduino, joystick module, potentiometer, and servo on your desk.
-2. Connect all components according to the wiring tables in [Section 2](#2-wiring).
-3. Do not connect the Arduino to the PC yet — wait until after uploading firmware.
+1. Place the Arduino UNO, joystick module, and potentiometer on your desk.
+2. Connect all components directly to the Arduino according to the wiring tables in
+   [Section 2](#2-wiring). No breadboard is needed.
+3. Run a short jumper wire from the potentiometer's right leg (VCC) to the joystick
+   module's VCC pin — this daisy-chains power between the two components.
+4. Do not connect the Arduino to the PC yet — wait until after uploading firmware.
 
 ---
 
@@ -166,8 +187,17 @@ This installs:
 6. Click the **Upload** button (the right-arrow icon, or press `Ctrl+U`).
 7. Wait for the IDE to show **Done uploading** in the status bar.
 8. Open **Tools → Serial Monitor**, set the baud rate to **115200**, and confirm you see
-   comma-separated numbers updating roughly 50 times per second. This confirms the firmware
-   is running correctly.
+   comma-separated numbers updating roughly 50 times per second:
+   ```
+   512,510,0,342
+   512,511,0,344
+   ```
+   The four values are: joystick X, joystick Y, button (0 or 1), throttle raw ADC.
+   Move the joystick and throttle to confirm all four values change. This confirms the
+   firmware is running correctly.
+
+> **Note:** The firmware no longer drives a servo. D9 is unused. If you previously had a
+> servo connected to D9, disconnect it — it will not do anything and is not needed.
 
 ---
 
@@ -231,18 +261,39 @@ Prevents stick drift from a loose joystick returning slightly off-center.
 
 Flips the axis direction. Use this if your pitch or roll is backwards in-game.
 
-### Set Center (Calibration)
+### Joystick Center Calibration (Set Center)
 
 If your joystick drifts slightly from the electrical center of 512:
 
 1. Let go of the stick so it rests at neutral.
-2. Click **Set Center** for X and then Y.
-3. The app records the current raw reading as the center point.
+2. Click **Set Center** for the X axis and then the Y axis.
+3. The app records the current raw reading as the center point for each axis.
+
+### Throttle Calibration (Set 0% / Set 100%)
+
+The throttle potentiometer rarely spans the full 0–1023 ADC range when integrated into
+a physical throttle mechanism. Calibration tells the app exactly where your throttle's
+physical idle and full-power stops are.
+
+**Steps (do this once after assembly, and again after any mechanical changes):**
+
+1. Connect to the Arduino and confirm the throttle bar is responding.
+2. Move the throttle to its **physical idle (0%) stop** — the fully-back position.
+3. Click **Set 0%** in the Throttle panel. The app stores that raw ADC value as the idle endpoint.
+4. Move the throttle to its **physical full-power (100%) stop** — the fully-forward position.
+5. Click **Set 100%**. The app stores that value as the full-power endpoint.
+6. Slide the throttle from stop to stop and confirm:
+   - The progress bar sweeps the full width.
+   - The percentage readout next to the bar goes from **0%** to **100%**.
+7. Click **Save Config** to persist the calibration.
+
+> If you click **Set 100%** before **Set 0%**, or with the throttle in the wrong position,
+> the app will warn you. Just repeat the steps in order.
 
 ### Saving Your Config
 
-Click **Save Config** to write your settings to `config/default_config.json`.
-They will be loaded automatically the next time you open the app.
+Click **Save Config** to write all settings (calibration, deadzone, sensitivity, invert)
+to `config/default_config.json`. They load automatically the next time you open the app.
 
 ---
 
@@ -289,9 +340,9 @@ buttons as needed.
 - Open **Configure vJoy**, confirm Device 1 is enabled with axes X, Y, Z and at least 1 button, and click Apply.
 - Check Windows **Control Panel → Devices and Printers** — vJoy Device should appear there.
 
-### Servo jitters or Arduino resets
-- The UNO's 5V rail is being overloaded. Power the servo from a separate 5V USB adapter,
-  connecting only the GND wire back to the Arduino.
+### Throttle shows 0% or 100% at rest / calibration feels off
+- Re-run throttle calibration: move to the physical idle stop → **Set 0%**, move to full stop → **Set 100%**, then **Save Config**.
+- Check that the potentiometer wiper wire is firmly seated in A2 and that the pot's legs have good contact with the VCC daisy-chain wire and the GND pin.
 
 ### Axis is reversed in-game
 - Check the **Invert** checkbox for that axis in the app, or use the in-game axis invert option.
@@ -335,15 +386,15 @@ Physical inputs
     ▼
 Arduino UNO R3
   • Reads joystick X (A0), Y (A1), button (D2) at 50 Hz
-  • Reads throttle potentiometer (A2)
-  • Rotates SG90 servo (D9) to mirror throttle position
+  • Reads throttle potentiometer (A2) — raw ADC 0–1023
   • Sends:  X,Y,BTN,THROTTLE  over USB serial at 115200 baud
     │
     ▼  USB cable
 Python app  (main.py)
   • serial_reader.py   parses the CSV stream in a background thread
-  • config_manager.py  holds deadzone / sensitivity / invert settings
-  • main.py            applies deadzone and sensitivity curves,
+  • config_manager.py  holds calibration endpoints, deadzone, sensitivity, invert
+  • main.py            maps raw throttle ADC through calibrated 0%–100% range,
+                       applies deadzone and sensitivity curves,
                        updates the live display at 50 Hz
   • vjoy_output.py     pushes the processed axes to vJoy Device 1
     │
@@ -352,6 +403,9 @@ vJoy Device 1
   (appears as a standard joystick to any game or sim)
 ```
 
-The Arduino's serial data is raw ADC values (0–1023). The Python app normalises these to
--1.0 → +1.0 for the stick axes and 0.0 → 1.0 for the throttle, then applies your chosen
-deadzone and sensitivity curve before forwarding to vJoy.
+The Arduino sends raw ADC values (0–1023). The Python app normalises the stick axes to
+-1.0 → +1.0 and maps the throttle through your calibrated endpoints to 0.0 → 1.0, then
+applies deadzone and sensitivity before forwarding to vJoy.
+
+Throttle calibration is stored in `config/default_config.json` as the `min` and `max`
+values for the throttle axis. No firmware changes are needed when you recalibrate.
