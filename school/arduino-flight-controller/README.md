@@ -225,6 +225,11 @@ python main.py
 
 The configuration window will open.
 
+> **Common issue — "PermissionError: Access is denied" on COM3:**
+> This means another program has the serial port open. The most likely cause is the
+> Arduino IDE Serial Monitor still running from Step 5. Close the Serial Monitor (or
+> Arduino IDE entirely) before running the app — only one program can hold the port at a time.
+
 ---
 
 ## 8. Using the App
