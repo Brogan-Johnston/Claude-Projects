@@ -43,16 +43,17 @@ All components come from the Elegoo Super Starter Kit for UNO.
 
 ## 2. Wiring
 
-Everything connects directly to the Arduino with jumper wires — no breadboard needed.
-The potentiometer daisy-chains its power off the joystick module so only one 5V wire
-runs to the Arduino.
+All components connect to the Arduino with jumper wires. A mini breadboard acts as a
+5V power junction so both the joystick module and potentiometer can share the Arduino's
+single 5V pin without needing to daisy-chain wires between components.
 
 ### Overview
 
 ```
 Arduino UNO R3
   Power header (left side):
-    5V  ──────────────────── Joystick VCC
+    5V  ──────────────────── Mini breadboard row 1 ─┬─ Joystick VCC
+                                                    └─ Pot right leg (VCC)
     GND (pin 1 of 2) ─────── Joystick GND
     GND (pin 2 of 2) ─────── Pot left leg (GND)
 
@@ -63,9 +64,6 @@ Arduino UNO R3
 
   Digital pin:
     D2 ────────────────────── Joystick SW
-
-  Joystick module (on the module itself):
-    VCC pin ───────────────── Pot right leg (VCC)   ← daisy-chain, no breadboard needed
 ```
 
 ### Joystick Module (KY-023) → Arduino UNO
@@ -84,15 +82,31 @@ The joystick module has 5 pins along one edge, labelled on the PCB.
 
 ### Potentiometer (Throttle) → Arduino UNO
 
-The pot is integrated into the 3D-printed throttle mechanism. Its power comes from
-the joystick module's VCC pin (a short jumper between the two), so only one 5V wire
-runs back to the Arduino.
+The pot is integrated into the 3D-printed throttle mechanism. Its 5V power comes from
+the mini breadboard junction shared with the joystick module.
 
 | Potentiometer Pin | Connection | Notes |
 |------------------|------------|-------|
 | Left outer leg (GND) | Arduino GND (power header, second GND pin) | |
 | Center wiper | Arduino A2 | Throttle position reading |
-| Right outer leg (VCC) | Joystick VCC pin (on the joystick module) | Daisy-chained |
+| Right outer leg (VCC) | Mini breadboard row 1 | Shares 5V with joystick via breadboard |
+
+### Mini Breadboard Power Junction
+
+The Arduino UNO has only one 5V pin on its power header. The mini breadboard acts as a
+splitter so both the joystick and potentiometer can draw from it.
+
+A 17x10 mini breadboard has no dedicated power rails — all 5 holes in the same row on
+the same side of the center divider are connected. Use any free row as your 5V junction:
+
+| Breadboard hole | Wire |
+|----------------|------|
+| Row 1, col a | Arduino 5V (from power header) |
+| Row 1, col b | Joystick VCC pin |
+| Row 1, col c | Potentiometer right outer leg (VCC) |
+
+All three holes share the same connection, so 5V reaches both components from the single
+Arduino 5V pin. Keep all three wires on the **same side** of the center divider.
 
 > **Power budget:** Joystick (~5 mA) + potentiometer (~0.5 mA) = ~5.5 mA total.
 > The Arduino's 5V rail supplies up to 500 mA via USB — no issues.
