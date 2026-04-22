@@ -230,14 +230,22 @@ Expected output: pip downloads and installs `pyserial` and `pyvjoy` without erro
 
 ## 7. Running the Config App
 
-With the Arduino plugged in and firmware uploaded, run:
+With the Arduino plugged in and firmware uploaded, double-click **`launch.bat`** in the
+project root. It will:
 
-```
-cd C:\Users\Broga\Projects\school\arduino-flight-controller\app
-python main.py
-```
+1. Verify Python is installed (and tell you how to fix it if not)
+2. Install or update the required Python packages automatically
+3. Confirm the vJoy driver is present
+4. Launch the app
 
-The configuration window will open.
+This works the same for a first-time setup and for restarting the app on a return visit —
+just double-click `launch.bat` every time.
+
+> **Manual alternative:** if you prefer the command line:
+> ```
+> cd C:\Users\Broga\Projects\school\arduino-flight-controller\app
+> python main.py
+> ```
 
 > **Common issue — "PermissionError: Access is denied" on COM3:**
 > This means another program has the serial port open. The most likely cause is the
@@ -379,6 +387,7 @@ arduino-flight-controller/
 ├── README.md                       ← this file
 ├── CLAUDE.md                       ← project notes for Claude Code
 ├── todos.md                        ← task tracking
+├── launch.bat                      ← double-click to set up and run the app
 │
 ├── firmware/
 │   └── flight_controller/
