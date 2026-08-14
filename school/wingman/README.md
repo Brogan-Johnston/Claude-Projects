@@ -27,6 +27,15 @@ that builds itself around your schedule.
 - Node.js 22.5+ (this project uses the built-in `node:sqlite` module, so there's nothing to
   compile — no Visual Studio Build Tools needed).
 
+## Quick start
+
+Double-click **`start.bat`** in this folder. First run installs everything (may take a
+minute); every run after that just starts the app and opens it in your browser at
+`http://localhost:5173`. It opens two extra console windows ("Wingman Backend" and
+"Wingman Frontend") — leave those open while you use the app, close them when you're done.
+
+That's all most people need. The manual steps below are for reference or troubleshooting.
+
 ## Setup
 
 ### 1. Backend
