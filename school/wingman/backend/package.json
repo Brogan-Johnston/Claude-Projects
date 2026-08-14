@@ -1,0 +1,25 @@
+{
+  "name": "wingman-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local API server for Wingman - academic command center",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@azure/msal-node": "^5.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mammoth": "^1.8.0",
+    "multer": "^2.0.1",
+    "pdf-parse": "^1.1.1"
+  }
+}
