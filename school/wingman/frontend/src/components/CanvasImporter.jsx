@@ -5,7 +5,7 @@ import { bestMatchCanvasId } from "../utils/canvasMatch.js";
 const TYPES = ["exam", "quiz", "project", "homework", "reading", "assignment"];
 
 export default function CanvasImporter({ courseId, courseName, courseCode, canvasCourseId, onLinked, onDone, onCancel }) {
-  const [configured, setConfigured] = useState(null);
+  const [connected, setConnected] = useState(null);
   const [canvasCourses, setCanvasCourses] = useState([]);
   const [selectedCanvasCourse, setSelectedCanvasCourse] = useState("");
   const [items, setItems] = useState(null);
@@ -13,11 +13,11 @@ export default function CanvasImporter({ courseId, courseName, courseCode, canva
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    api.get("/canvas/status").then((s) => setConfigured(s.configured)).catch(() => setConfigured(false));
+    api.get("/canvas/status").then((s) => setConnected(s.connected)).catch(() => setConnected(false));
   }, []);
 
   useEffect(() => {
-    if (configured && !canvasCourseId) {
+    if (connected && !canvasCourseId) {
       api
         .get("/canvas/courses")
         .then((list) => {
@@ -27,7 +27,7 @@ export default function CanvasImporter({ courseId, courseName, courseCode, canva
         })
         .catch((err) => setError(err.message));
     }
-  }, [configured, canvasCourseId]);
+  }, [connected, canvasCourseId]);
 
   // Linking and syncing happen as one click - the user picks the Canvas course and
   // immediately sees the review table, instead of linking, then having to click again to sync.
@@ -79,12 +79,12 @@ export default function CanvasImporter({ courseId, courseName, courseCode, canva
     }
   }
 
-  if (configured === null) return null;
+  if (connected === null) return null;
 
-  if (!configured) {
+  if (!connected) {
     return (
       <div className="empty-state">
-        <p>Canvas isn't configured yet. Add your base URL and access token in Settings first.</p>
+        <p>Canvas isn't connected yet. Go to Settings and log in to Canvas first.</p>
         <button className="btn secondary" onClick={onCancel}>
           Close
         </button>
@@ -137,8 +137,8 @@ export default function CanvasImporter({ courseId, courseName, courseCode, canva
   return (
     <div>
       <p>
-        Found {items.length} item{items.length === 1 ? "" : "s"}. Double-check anything marked
-        <span className="confidence-low"> low confidence</span>, then import.
+        Found {items.length} item{items.length === 1 ? "" : "s"} on this course's syllabus page. Review the dates
+        (weight % isn't available from Canvas this way - add it by hand if you track it), then import.
       </p>
       {error && <p style={{ color: "var(--rust)" }}>{error}</p>}
       <div className="scroll-x">

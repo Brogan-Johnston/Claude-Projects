@@ -6,7 +6,7 @@ const TYPES = ["exam", "quiz", "project", "homework", "reading", "assignment"];
 
 // One-click-per-step setup for linking every course to Canvas at once, instead of repeating
 // the link -> sync -> review cycle per course from the Courses page. Lives in Settings, right
-// under the Canvas card, and only shows once a token is saved.
+// under the Canvas card, and only shows once Canvas is connected.
 export default function CanvasSetup() {
   const [courses, setCourses] = useState([]);
   const [canvasCourses, setCanvasCourses] = useState([]);

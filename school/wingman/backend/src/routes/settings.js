@@ -1,5 +1,5 @@
 import { Router } from "express";
-import db from "../db/index.js";
+import db, { transaction } from "../db/index.js";
 
 const router = Router();
 
@@ -12,7 +12,6 @@ router.get("/", (req, res) => {
   res.json({
     ...Object.fromEntries(PUBLIC_KEYS.map((k) => [k, settings[k] ?? null])),
     anthropic_api_key_set: Boolean(settings.anthropic_api_key || process.env.ANTHROPIC_API_KEY),
-    canvas_token_set: Boolean(settings.canvas_token),
   });
 });
 
@@ -20,11 +19,11 @@ router.put("/", (req, res) => {
   const upsert = db.prepare(
     "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
   );
-  const tx = db.transaction((entries) => {
+  const tx = transaction((entries) => {
     for (const [key, value] of entries) upsert.run(key, String(value));
   });
 
-  const allowedIncoming = [...PUBLIC_KEYS, "anthropic_api_key", "canvas_token"];
+  const allowedIncoming = [...PUBLIC_KEYS, "anthropic_api_key"];
   const entries = Object.entries(req.body || {}).filter(([k, v]) => allowedIncoming.includes(k) && v !== "");
   tx(entries);
   res.status(204).end();

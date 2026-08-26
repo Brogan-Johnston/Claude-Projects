@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
-import { useOutlookConnection } from "../hooks/useOutlookConnection.js";
+import { useScraperConnection } from "../hooks/useScraperConnection.js";
 import CanvasSetup from "../components/CanvasSetup.jsx";
 
 export default function Settings() {
   const [settings, setSettings] = useState(null);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [savedMsg, setSavedMsg] = useState(null);
-  const { status: outlookStatus, loginStarted: outlookLoginStarted, checking: outlookChecking, login: loginOutlook, checkNow: checkOutlookConnection } = useOutlookConnection();
+  const { status: outlookStatus, loginStarted: outlookLoginStarted, checking: outlookChecking, login: loginOutlook, checkNow: checkOutlookConnection } = useScraperConnection("/outlook");
+  const { status: canvasStatus, loginStarted: canvasLoginStarted, checking: canvasChecking, login: loginCanvas, checkNow: checkCanvasConnection } = useScraperConnection("/canvas");
   const [canvasBaseUrl, setCanvasBaseUrl] = useState("");
-  const [canvasToken, setCanvasToken] = useState("");
   const [links, setLinks] = useState([]);
   const [newLink, setNewLink] = useState({ label: "", url: "" });
 
@@ -37,12 +37,16 @@ export default function Settings() {
     checkOutlookConnection();
   }
 
-  async function saveCanvas(e) {
+  async function saveCanvasBaseUrl(e) {
     e.preventDefault();
-    await api.put("/settings", { canvas_base_url: canvasBaseUrl, canvas_token: canvasToken });
-    setCanvasToken("");
-    setSavedMsg("Canvas settings saved.");
+    await api.put("/settings", { canvas_base_url: canvasBaseUrl });
+    setSavedMsg("Canvas base URL saved.");
     refresh();
+  }
+
+  async function disconnectCanvas() {
+    await api.post("/canvas/disconnect", {});
+    checkCanvasConnection();
   }
 
   async function addLink(e) {
@@ -146,35 +150,48 @@ export default function Settings() {
         <div className="card">
           <div className="section-title">
             <h3>Canvas</h3>
-            <span className={`badge ${settings.canvas_token_set ? "ok" : "warn"}`}>
-              {settings.canvas_token_set ? "Configured" : "Not set"}
+            <span className={`badge ${canvasStatus?.connected ? "ok" : "warn"}`}>
+              {canvasStatus?.connected ? "Connected" : "Not connected"}
             </span>
           </div>
-          <p>
-            Generate a token in Canvas: Account → Settings → "+ New Access Token" — no admin
-            approval needed. Used to import assignments and exam dates.
-          </p>
-          <form onSubmit={saveCanvas} className="form-grid">
-            <div>
-              <label>Base URL</label>
-              <input type="text" value={canvasBaseUrl} onChange={(e) => setCanvasBaseUrl(e.target.value)} />
-            </div>
-            <div>
-              <label>Access token</label>
-              <input
-                type="password"
-                placeholder="1234~..."
-                value={canvasToken}
-                onChange={(e) => setCanvasToken(e.target.value)}
-              />
-            </div>
-            <div style={{ alignSelf: "end" }}>
-              <button className="btn" type="submit">
-                Save
-              </button>
-            </div>
+          <p>Wingman signs into Canvas itself (no access token needed) to read assignments and exam dates from each course's syllabus page.</p>
+          <form onSubmit={saveCanvasBaseUrl} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <input type="text" value={canvasBaseUrl} onChange={(e) => setCanvasBaseUrl(e.target.value)} />
+            <button className="btn secondary" type="submit">
+              Save URL
+            </button>
           </form>
-          {settings.canvas_token_set && <CanvasSetup />}
+          {canvasStatus?.connected ? (
+            <>
+              <button className="btn secondary" onClick={disconnectCanvas}>
+                Disconnect
+              </button>
+              <CanvasSetup />
+            </>
+          ) : (
+            <ol className="step-list">
+              <li className={canvasLoginStarted ? "step-active" : ""}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  {!canvasLoginStarted ? (
+                    <button className="btn" onClick={loginCanvas}>
+                      Log in to Canvas
+                    </button>
+                  ) : (
+                    <>
+                      <span>{canvasChecking ? "Waiting for you to sign in…" : "Still not connected."}</span>
+                      <button className="btn secondary" onClick={checkCanvasConnection}>
+                        Check now
+                      </button>
+                    </>
+                  )}
+                </div>
+                {canvasLoginStarted && (
+                  <p>Sign in in the window that opened (including any school SSO/two-factor step) — Wingman never sees your password.</p>
+                )}
+              </li>
+              <li>We'll detect the connection automatically once you're signed in.</li>
+            </ol>
+          )}
         </div>
 
         <div className="card">

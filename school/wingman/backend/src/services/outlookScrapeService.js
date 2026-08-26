@@ -1,59 +1,14 @@
-import { chromium } from "playwright";
-import { spawn } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { createBrowserSession } from "./browserSession.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, "..", "..", "data");
-const PROFILE_DIR = path.join(dataDir, "outlook-profile");
+const session = createBrowserSession("outlook-profile");
 const INBOX_URL = "https://outlook.live.com/mail/0/inbox";
 
-let contextPromise = null;
-
-// A prior `node --watch` restart can leave an orphaned Chromium holding the profile-dir
-// lock (especially on Windows, where SIGTERM isn't reliably delivered to child processes).
-// One retry after a short delay covers the common case where Windows has already reaped it.
-async function launchWithRetry(opts, attempt = 0) {
-  try {
-    return await chromium.launchPersistentContext(PROFILE_DIR, opts);
-  } catch (err) {
-    if (attempt === 0 && /lock|already in use|singleton/i.test(String(err.message))) {
-      await new Promise((resolve) => setTimeout(resolve, 750));
-      return launchWithRetry(opts, attempt + 1);
-    }
-    throw err;
-  }
-}
-
-function getSharedContext() {
-  if (!contextPromise) {
-    contextPromise = launchWithRetry({ headless: true, viewport: { width: 1280, height: 900 } }).catch((err) => {
-      contextPromise = null;
-      throw err;
-    });
-  }
-  return contextPromise;
-}
-
 export async function closeSharedContext() {
-  if (!contextPromise) return;
-  const ctx = await contextPromise.catch(() => null);
-  contextPromise = null;
-  if (ctx) await ctx.close().catch(() => {});
+  await session.closeSharedContext();
 }
 
-// Opens a real, visible browser window for the user to log into their personal Outlook
-// account themselves - Wingman never sees or stores a password. Runs as a separate,
-// detached OS process (not just a headed page in the shared context) so it can hold the
-// profile-directory lock on its own for as long as the user needs, without racing the
-// headless context used for scraping.
 export async function startLogin() {
-  await closeSharedContext();
-  const scriptPath = path.join(__dirname, "..", "scripts", "loginOutlook.js");
-  const child = spawn(process.execPath, [scriptPath, PROFILE_DIR], { detached: true, stdio: "ignore" });
-  child.unref();
-  return { started: true };
+  return session.startLogin("loginOutlook.js");
 }
 
 async function isLoggedIn(page) {
@@ -68,9 +23,9 @@ async function isLoggedIn(page) {
 }
 
 export async function isConnected() {
-  if (!fs.existsSync(PROFILE_DIR)) return false;
+  if (!session.isProfileInitialized()) return false;
   try {
-    const ctx = await getSharedContext();
+    const ctx = await session.getSharedContext();
     const page = ctx.pages()[0] ?? (await ctx.newPage());
     return await isLoggedIn(page);
   } catch {
@@ -85,7 +40,7 @@ export async function isConnected() {
 // starts failing, re-check the current markup with:
 //   npx playwright codegen https://outlook.live.com/mail/0/inbox
 export async function fetchRecentEmails(count = 8) {
-  const ctx = await getSharedContext();
+  const ctx = await session.getSharedContext();
   const page = ctx.pages()[0] ?? (await ctx.newPage());
 
   const loggedIn = await isLoggedIn(page);
@@ -126,6 +81,5 @@ export async function fetchRecentEmails(count = 8) {
 }
 
 export async function disconnect() {
-  await closeSharedContext();
-  fs.rmSync(PROFILE_DIR, { recursive: true, force: true });
+  await session.disconnect();
 }

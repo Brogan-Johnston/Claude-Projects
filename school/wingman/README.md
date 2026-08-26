@@ -12,7 +12,7 @@ that builds itself around your schedule.
   exam, quiz, project, and homework due date (with your grade weight, where stated). You
   review and edit the extracted list before anything is saved.
 - **Canvas import** — link a course to its Canvas course and pull in assignments and exam/test
-  dates directly from Canvas's API, reviewed before anything is saved (same review-then-import
+  dates straight from its syllabus page, reviewed before anything is saved (same review-then-import
   flow as syllabus upload).
 - **Weekly schedule** — set your class meeting times once; they show up everywhere (dashboard,
   calendar, and as "busy" blocks the study planner won't schedule over).
@@ -59,7 +59,7 @@ Outlook and Canvas need no `.env` setup at all — both are configured from the 
 page. See "Connecting Outlook" and "Connecting Canvas" below.
 
 The first `npm install` also downloads a Chromium browser for Playwright (used to read your
-Outlook inbox) — this can take a minute or two and is normal, not a hang.
+Outlook inbox and Canvas courses) — this can take a minute or two and is normal, not a hang.
 
 Start the API server:
 
@@ -107,15 +107,28 @@ If you skip this, everything else in the app works fine — the inbox panel just
 
 ## Connecting Canvas (optional)
 
-1. In Canvas, go to **Account** → **Settings** → **+ New Access Token**. No admin approval is
-   needed — this is a normal, supported student-facing feature.
-2. In Wingman's **Settings**, paste your school's Canvas base URL (e.g.
-   `https://utk.instructure.com`, prefilled by default) and the token, then **Save**.
-3. On the **Courses** page, click **Canvas** on a course, pick the matching Canvas course from
-   the dropdown to link it, then click **Sync from Canvas**.
-4. Review the pulled-in assignments and exam/test dates (edit anything that looks off) and
-   click **Import**. Re-syncing later updates previously imported items instead of duplicating
-   them.
+Canvas has an official API, but it requires a personal access token, and some schools disable
+students' ability to generate one. Wingman works around that the same way it does for Outlook —
+by signing into the real Canvas website in a browser window you control, instead of using a
+token.
+
+1. In Wingman's **Settings**, check the Canvas base URL (e.g. `https://utk.instructure.com`,
+   prefilled by default) and **Save URL** if it's different for your school.
+2. Click **Log in to Canvas**. A real Chromium browser window opens on your computer at your
+   school's Canvas login, which may bounce through your school's SSO/Duo step - sign in there
+   yourself. Wingman never sees or stores your password.
+3. Once you're back on a normal Canvas page, the window closes itself and Settings shows
+   "Connected" automatically (no separate "check connection" click needed).
+4. Right in Settings, match each course to its Canvas course (guessed for you where possible)
+   and click **Link courses**, then **Sync assignments** to pull in due dates and exam/test
+   dates from each course's syllabus page. Review the combined list (edit anything that looks
+   off) and click **Import**. Re-syncing later updates previously imported items instead of
+   duplicating them.
+
+Note: reading the syllabus page this way doesn't have access to grade-weight percentages the
+way the official API would - add those by hand after import if you track them. This also
+breaks if Canvas changes its page layout or your session expires; if a sync fails, just log in
+again from Settings.
 
 If you skip this, everything else in the app works fine — assignments can still be added
 manually or via syllabus upload.
@@ -127,7 +140,7 @@ backend/
   src/
     db/            SQLite schema + seed data (courses, assignments, schedule, settings)
     routes/         Express routes, one file per resource
-    services/       Claude syllabus extraction, study plan generator, Outlook scraper, Canvas client
+    services/       Claude syllabus extraction, study plan generator, Outlook/Canvas scrapers
     server.js
   data/             SQLite file lives here (gitignored)
 frontend/

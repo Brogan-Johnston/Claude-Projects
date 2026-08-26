@@ -4,10 +4,10 @@ import { api } from "../api/client.js";
 const POLL_MS = 4000;
 const MAX_POLLS = 45; // ~3 minutes, then fall back to the manual "Check now" button
 
-// Shared by the Settings page and the dashboard InboxPanel so logging in from either place
-// behaves the same way: click once, then Wingman polls in the background and updates itself
-// the moment the sign-in window succeeds - no separate "check connection" click needed.
-export function useOutlookConnection() {
+// Shared by every browser-login integration (Outlook, Canvas) so logging in behaves the same
+// way everywhere it appears: click once, then Wingman polls in the background and updates
+// itself the moment the sign-in window succeeds - no separate "check connection" click needed.
+export function useScraperConnection(apiPrefix) {
   const [status, setStatus] = useState(null);
   const [loginStarted, setLoginStarted] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -27,7 +27,7 @@ export function useOutlookConnection() {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     api
-      .get("/outlook/status")
+      .get(`${apiPrefix}/status`)
       .then((s) => {
         setStatus(s);
         if (s.connected) stopPolling();
@@ -55,10 +55,11 @@ export function useOutlookConnection() {
   useEffect(() => {
     checkNow();
     return stopPolling;
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiPrefix]);
 
   async function login() {
-    await api.post("/outlook/login", {});
+    await api.post(`${apiPrefix}/login`, {});
     setLoginStarted(true);
     startPolling();
   }

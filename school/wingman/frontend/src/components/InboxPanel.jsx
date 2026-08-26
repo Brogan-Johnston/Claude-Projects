@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client.js";
-import { useOutlookConnection } from "../hooks/useOutlookConnection.js";
+import { useScraperConnection } from "../hooks/useScraperConnection.js";
 
 export default function InboxPanel() {
-  const { status, loginStarted, checking, login } = useOutlookConnection();
+  const { status, loginStarted, checking, login } = useScraperConnection("/outlook");
   const [emails, setEmails] = useState([]);
   const [error, setError] = useState(null);
 

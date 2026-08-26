@@ -12,7 +12,8 @@ import calendarRouter from "./routes/calendar.js";
 import outlookRouter from "./routes/outlook.js";
 import canvasRouter from "./routes/canvas.js";
 import settingsRouter from "./routes/settings.js";
-import { closeSharedContext } from "./services/outlookScrapeService.js";
+import { closeSharedContext as closeOutlookContext } from "./services/outlookScrapeService.js";
+import { closeSharedContext as closeCanvasContext } from "./services/canvasScrapeService.js";
 
 const app = express();
 app.use(cors());
@@ -40,11 +41,11 @@ app.listen(PORT, () => {
   console.log(`Wingman API listening on http://localhost:${PORT}`);
 });
 
-// Best-effort cleanup so the Outlook scraper's shared browser doesn't leak past a restart.
-// On Windows, `node --watch` restarts don't always deliver SIGTERM to this process in time -
-// outlookScrapeService's launch-retry logic is the second line of defense for that case.
+// Best-effort cleanup so the Outlook/Canvas scrapers' shared browsers don't leak past a
+// restart. On Windows, `node --watch` restarts don't always deliver SIGTERM to this process
+// in time - browserSession's launch-retry logic is the second line of defense for that case.
 async function shutdown() {
-  await closeSharedContext();
+  await Promise.all([closeOutlookContext(), closeCanvasContext()]);
   process.exit(0);
 }
 process.on("SIGINT", shutdown);

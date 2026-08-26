@@ -1,11 +1,32 @@
 import { Router } from "express";
 import db, { transaction } from "../db/index.js";
-import { isConfigured, listCourses, fetchCanvasPreview } from "../services/canvasService.js";
+import { isConnected, startLogin, disconnect, listCourses, fetchCanvasPreview } from "../services/canvasScrapeService.js";
 
 const router = Router();
 
-router.get("/status", (req, res) => {
-  res.json({ configured: isConfigured() });
+router.get("/status", async (req, res, next) => {
+  try {
+    res.json({ connected: await isConnected() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/login", async (req, res, next) => {
+  try {
+    res.status(202).json(await startLogin());
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/disconnect", async (req, res, next) => {
+  try {
+    await disconnect();
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get("/courses", async (req, res, next) => {

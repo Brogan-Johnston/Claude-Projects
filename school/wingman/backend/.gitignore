@@ -4,4 +4,5 @@ data/*.sqlite-journal
 data/*.sqlite-wal
 data/*.sqlite-shm
 data/outlook-profile/
+data/canvas-profile/
 .env
