@@ -3,15 +3,16 @@ import db from "../db/index.js";
 
 const router = Router();
 
-const PUBLIC_KEYS = ["study_window_start", "study_window_end", "session_minutes", "student_name"];
+const PUBLIC_KEYS = ["study_window_start", "study_window_end", "session_minutes", "student_name", "canvas_base_url"];
 
 router.get("/", (req, res) => {
   const rows = db.prepare("SELECT key, value FROM settings").all();
   const settings = Object.fromEntries(rows.map((r) => [r.key, r.value]));
-  // Never send the raw API key back to the browser - just whether one is set.
+  // Never send raw secrets back to the browser - just whether one is set.
   res.json({
     ...Object.fromEntries(PUBLIC_KEYS.map((k) => [k, settings[k] ?? null])),
     anthropic_api_key_set: Boolean(settings.anthropic_api_key || process.env.ANTHROPIC_API_KEY),
+    canvas_token_set: Boolean(settings.canvas_token),
   });
 });
 
@@ -23,7 +24,7 @@ router.put("/", (req, res) => {
     for (const [key, value] of entries) upsert.run(key, String(value));
   });
 
-  const allowedIncoming = [...PUBLIC_KEYS, "anthropic_api_key"];
+  const allowedIncoming = [...PUBLIC_KEYS, "anthropic_api_key", "canvas_token"];
   const entries = Object.entries(req.body || {}).filter(([k, v]) => allowedIncoming.includes(k) && v !== "");
   tx(entries);
   res.status(204).end();

@@ -1,45 +1,31 @@
 import { Router } from "express";
-import {
-  isConfigured,
-  isConnected,
-  getAuthUrl,
-  handleCallback,
-  disconnect,
-  fetchRecentEmails,
-} from "../services/outlookService.js";
+import { isConnected, startLogin, fetchRecentEmails, disconnect } from "../services/outlookScrapeService.js";
 
 const router = Router();
 
-router.get("/status", (req, res) => {
-  res.json({ configured: isConfigured(), connected: isConnected() });
-});
-
-router.get("/login", async (req, res, next) => {
+router.get("/status", async (req, res, next) => {
   try {
-    if (!isConfigured()) {
-      return res.status(400).json({ error: "Outlook app credentials are not set. See backend/.env.example." });
-    }
-    const url = await getAuthUrl();
-    res.redirect(url);
+    res.json({ connected: await isConnected() });
   } catch (err) {
     next(err);
   }
 });
 
-router.get("/callback", async (req, res, next) => {
+router.post("/login", async (req, res, next) => {
   try {
-    const { code } = req.query;
-    await handleCallback(code);
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    res.redirect(`${frontendUrl}/settings?outlook=connected`);
+    res.status(202).json(await startLogin());
   } catch (err) {
     next(err);
   }
 });
 
-router.post("/disconnect", (req, res) => {
-  disconnect();
-  res.status(204).end();
+router.post("/disconnect", async (req, res, next) => {
+  try {
+    await disconnect();
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get("/emails", async (req, res, next) => {

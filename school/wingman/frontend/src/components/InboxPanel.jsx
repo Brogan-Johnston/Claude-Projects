@@ -1,41 +1,37 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client.js";
-import { fmtDateTime } from "../utils/format.js";
+import { useOutlookConnection } from "../hooks/useOutlookConnection.js";
 
 export default function InboxPanel() {
-  const [status, setStatus] = useState(null);
+  const { status, loginStarted, checking, login } = useOutlookConnection();
   const [emails, setEmails] = useState([]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    api.get("/outlook/status").then(setStatus).catch(() => setStatus({ configured: false, connected: false }));
-  }, []);
-
-  useEffect(() => {
     if (status?.connected) {
+      setError(null);
       api.get("/outlook/emails?count=6").then(setEmails).catch((err) => setError(err.message));
     }
   }, [status]);
 
   if (!status) return null;
 
-  if (!status.configured) {
-    return (
-      <div className="empty-state">
-        Outlook isn't set up yet. Add your Microsoft app credentials in <Link to="/settings">Settings</Link> to see
-        your inbox here.
-      </div>
-    );
-  }
-
   if (!status.connected) {
     return (
       <div className="empty-state">
         <p>Connect your Outlook account to see unread mail without leaving Wingman.</p>
-        <a className="btn" href="/api/outlook/login">
-          Connect Outlook
-        </a>
+        {!loginStarted && (
+          <button className="btn" onClick={login}>
+            Log in to Outlook
+          </button>
+        )}
+        {loginStarted && (
+          <p>
+            {checking ? "Waiting for you to sign in…" : "Still not connected."} Finish signing in in the
+            window that opened, or head to <Link to="/settings">Settings</Link> for more options.
+          </p>
+        )}
       </div>
     );
   }
@@ -54,7 +50,7 @@ export default function InboxPanel() {
           <div>
             <div className="from">{e.from}</div>
             <div className="meta" style={{ color: "var(--text-muted)" }}>
-              {e.subject || "(no subject)"} · {fmtDateTime(e.receivedAt)}
+              {e.subject || "(no subject)"} · {e.receivedAt}
             </div>
           </div>
         </a>

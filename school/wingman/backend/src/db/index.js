@@ -95,6 +95,26 @@ CREATE TABLE IF NOT EXISTS quick_links (
 );
 `);
 
+// Additive schema changes for Canvas import - no migration framework, so these must be
+// safe to re-run on every startup against an existing database.
+function columnExists(table, column) {
+  return db
+    .prepare("SELECT name FROM pragma_table_info(?)")
+    .all(table)
+    .some((c) => c.name === column);
+}
+if (!columnExists("courses", "canvas_course_id")) {
+  db.exec("ALTER TABLE courses ADD COLUMN canvas_course_id INTEGER");
+}
+if (!columnExists("assignments", "external_id")) {
+  db.exec("ALTER TABLE assignments ADD COLUMN external_id TEXT");
+}
+db.exec(`
+CREATE UNIQUE INDEX IF NOT EXISTS idx_assignments_canvas_ext
+ON assignments(course_id, external_id)
+WHERE source = 'canvas' AND external_id IS NOT NULL;
+`);
+
 // Seed default UTK quick links on first run only.
 const linkCount = db.prepare("SELECT COUNT(*) AS n FROM quick_links").get();
 if (linkCount.n === 0) {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import SyllabusUploader from "../components/SyllabusUploader.jsx";
+import CanvasImporter from "../components/CanvasImporter.jsx";
 import { fmtDateTime, weekdayShort } from "../utils/format.js";
 
 const PALETTE = ["#c1653a", "#74855f", "#8b5e3c", "#c9932f", "#a8432a", "#5c7a8a", "#9c6b98"];
@@ -27,6 +28,7 @@ export default function Courses() {
   const [newCourse, setNewCourse] = useState(emptyCourse());
   const [expandedSchedule, setExpandedSchedule] = useState(null);
   const [expandedSyllabus, setExpandedSyllabus] = useState(null);
+  const [expandedCanvas, setExpandedCanvas] = useState(null);
   const [expandedAssignments, setExpandedAssignments] = useState(null);
   const [newBlock, setNewBlock] = useState(null);
   const [newAssignment, setNewAssignment] = useState(null);
@@ -173,6 +175,9 @@ export default function Courses() {
               </button>
               <button className="btn subtle" onClick={() => setExpandedSyllabus(expandedSyllabus === course.id ? null : course.id)}>
                 Import syllabus
+              </button>
+              <button className="btn subtle" onClick={() => setExpandedCanvas(expandedCanvas === course.id ? null : course.id)}>
+                Canvas
               </button>
               <button className="btn danger" onClick={() => deleteCourse(course.id)}>
                 Delete
@@ -351,6 +356,23 @@ export default function Courses() {
                     refresh();
                   }}
                   onCancel={() => setExpandedSyllabus(null)}
+                />
+              </div>
+            )}
+
+            {expandedCanvas === course.id && (
+              <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+                <CanvasImporter
+                  courseId={course.id}
+                  courseName={course.name}
+                  courseCode={course.code}
+                  canvasCourseId={course.canvas_course_id}
+                  onLinked={refresh}
+                  onDone={() => {
+                    setExpandedCanvas(null);
+                    refresh();
+                  }}
+                  onCancel={() => setExpandedCanvas(null)}
                 />
               </div>
             )}
