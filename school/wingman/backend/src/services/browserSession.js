@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { STABLE_LAUNCH_ARGS } from "../scripts/launchArgs.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.join(__dirname, "..", "..", "data");
@@ -32,7 +33,11 @@ export function createBrowserSession(profileDirName) {
 
   function getSharedContext() {
     if (!contextPromise) {
-      contextPromise = launchWithRetry({ headless: true, viewport: { width: 1280, height: 900 } }).catch((err) => {
+      contextPromise = launchWithRetry({
+        headless: true,
+        viewport: { width: 1280, height: 900 },
+        args: STABLE_LAUNCH_ARGS,
+      }).catch((err) => {
         contextPromise = null;
         throw err;
       });
